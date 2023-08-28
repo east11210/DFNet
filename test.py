@@ -252,10 +252,12 @@ if __name__ == "__main__":
         "-b", "--batch_size", default=8, type=int, help="Batch size for testing."
     )
     parser.add_argument(
-        "--img", default="./samples/places2/img", help="Image or Image folder."
+        "--img", default="/Users/lijf/git/yingfeng/test-data/beach.jpg", help="Image or Image folder."
+        # "--img", default="./samples/places2/img/img_01.png", help="Image or Image folder."
     )
     parser.add_argument(
-        "--mask", default="./samples/places2/mask", help="Mask or Mask folder."
+        "--mask", default="/Volumes/ramdisk/beach_smi0.png", help="Mask or Mask folder."
+        # "--mask", default="./samples/places2/mask/mask_01.png", help="Mask or Mask folder."
     )
     parser.add_argument("--output", default="./output/places2", help="Output dir")
     parser.add_argument(
@@ -264,7 +266,52 @@ if __name__ == "__main__":
         help="Whether merge input and results for better viewing.",
     )
 
-    args = parser.parse_args()
-    tester = Tester(args.model, args.input_size, args.batch_size)
+    # args = parser.parse_args()
+    # tester = Tester(args.model, args.input_size, args.batch_size)
 
-    tester.inpaint(args.output, args.img, args.mask, merge_result=args.merge)
+    # tester.inpaint(args.output, args.img, args.mask, merge_result=args.merge)
+
+    device = torch.device("cpu")
+    model = DFNet().to(device)
+    checkpoint = torch.load("./model/model_places2.pth", map_location=device)
+    model.load_state_dict(checkpoint)
+
+    model.eval()
+
+    # model = model.to(memory_format=torch.channels_last)
+
+    img = cv2.imread("/Users/lijf/git/yingfeng/test-data/035.jpg", cv2.IMREAD_COLOR)
+    msk = cv2.imread("/Volumes/ramdisk/035/smi0.png", cv2.IMREAD_GRAYSCALE)
+    # img = cv2.imread("/Users/lijf/git/yingfeng/test-data/beach.jpg", cv2.IMREAD_COLOR)
+    # msk = cv2.imread("/Volumes/ramdisk/beach_smi0.png", cv2.IMREAD_GRAYSCALE)
+    inputSize = (512, 512)
+    img = cv2.resize(img, inputSize)
+    msk = cv2.resize(msk, inputSize)
+
+    # img[msk == 0] = 0
+
+    img = np.ascontiguousarray(img.transpose(2, 0, 1)).astype(np.uint8)
+    msk = np.ascontiguousarray(np.expand_dims(msk, 0)).astype(np.uint8)
+
+    msk = np.expand_dims(msk, 0)
+    img = np.expand_dims(img, 0)
+
+    img = torch.from_numpy(img).to(device)
+    msk = torch.from_numpy(msk).to(device)
+
+    img = img.float().div(255)
+    msk = msk.float().div(255)
+
+    imgMiss = img * msk
+
+    # result, alpha, raw = model(imgMiss, msk)
+    # result = imgMiss + result[0] * (1 - msk)
+    # result = result.mul(255).byte().data.cpu().numpy()
+    # result = np.transpose(result, [0, 2, 3, 1])
+    # cv2.imwrite("/Volumes/ramdisk/dfnet.jpg", result[0])
+
+    result = model(imgMiss, msk)
+    result = imgMiss + result * (1 - msk)
+    result = result.mul(255).byte().data.cpu().numpy()
+    result = np.transpose(result[0], [1, 2, 0])
+    cv2.imwrite("/Volumes/ramdisk/dfnet.jpg", result)

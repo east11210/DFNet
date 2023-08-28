@@ -253,15 +253,32 @@ class DFNet(nn.Module):
             out = encode(out)
             out_en.append(out)
 
-        results = []
-        alphas = []
-        raws = []
+        result = []
         for i, (decode, fuse) in enumerate(zip(self.de, self.fuse)):
             out = decode(out, out_en[-i-2])
-            if fuse:
-                result, alpha, raw = fuse(img_miss, out)
-                results.append(result)
-                alphas.append(alpha)
-                raws.append(raw)
 
-        return results[::-1], alphas[::-1], raws[::-1]
+        if fuse:
+            result, alpha, raw = fuse(img_miss, out)
+        return result
+
+    # def forward(self, img_miss, mask):
+
+    #     out = torch.cat([img_miss, mask], dim=1)
+
+    #     out_en = [out]
+    #     for encode in self.en:
+    #         out = encode(out)
+    #         out_en.append(out)
+
+    #     results = []
+    #     alphas = []
+    #     raws = []
+    #     for i, (decode, fuse) in enumerate(zip(self.de, self.fuse)):
+    #         out = decode(out, out_en[-i-2])
+    #         if fuse:
+    #             result, alpha, raw = fuse(img_miss, out)
+    #             results.append(result)
+    #             alphas.append(alpha)
+    #             raws.append(raw)
+
+    #     return results[::-1], alphas[::-1], raws[::-1]
